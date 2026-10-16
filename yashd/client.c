@@ -1,10 +1,6 @@
 /* client.c - yash, the client: a thin terminal for yashd
  *
  *   $ yash <IP_Address_of_Server>
- *
- * At the prompt, a typed line is sent as "CMD <line>\n". While a command runs
- * (between sending CMD and seeing the next "\n# "), typed lines are sent as
- * plain text for its stdin. Ctrl-C / Ctrl-Z / Ctrl-D become CTL c / z / d.
  * Ctrl-D or "quit" at the prompt exits.
  */
 #include <stdio.h>

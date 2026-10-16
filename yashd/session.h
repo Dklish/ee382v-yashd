@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <stddef.h>
 #include <netinet/in.h>
+#include "yash.h"
 
 #define YASHD_PORT  3820
 #define INBUF_SIZE  4096   /* protocol lines are at most ~200 characters */
@@ -30,6 +31,8 @@ typedef struct {
     volatile pid_t fg_pgid;          /* group of the foreground job, 0 at the prompt */
     int   in_fd;                     /* write end of the foreground job's stdin pipe, -1 if none */
     /* TODO (shell side): this client's job table goes here, e.g. job_t jobs[MAX_JOBS]; */
+    job_t jobs[MAX_JOBS];
+    char fg_cmd[MAX_LINE];
 } session_t;
 
 /* ---- implemented by the shell side ---- */
