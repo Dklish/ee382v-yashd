@@ -39,6 +39,7 @@ typedef struct {
     pid_t    pgid;
     jstate_t state;
     int      used;   /* 1 if this table slot is in use */
+    int      in_fd;  /* write end of its stdin pipe, kept while stopped, -1 if none */
     char     cmd[MAX_LINE];   /* command string to display */
 } job_t;
 

@@ -26,6 +26,10 @@ int session_cmd(session_t *s, char *line)
     pipeline_t pl;
     int done = 1;
 
+    /* Background jobs that finished are reported right after the newline,
+       before this command's output (spec, FAQ 15) */
+    jobs_report_done(s);
+
     if (parse_line(line, &pl) == 0) {           /* empty or invalid line: just reprompt */
         if (is_builtin(&pl, "jobs"))
             jobs_builtin(s);

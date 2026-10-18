@@ -58,6 +58,7 @@ int main(int argc, char *argv[])
     char tail[3] = {0, 0, 0};       /* last 3 bytes received, to spot "\n# " */
     int running = 0;                /* 1 between sending CMD and the next prompt */
     int stdin_open = 1;
+    int ready = 0;                  /* 1 once the server's first prompt arrives */
     int n, i;
 
     if (argc != 2) {
@@ -93,7 +94,7 @@ int main(int argc, char *argv[])
     sigaction(SIGTSTP, &sa, NULL);
 
     for (;;) {
-        pfd[0].fd = stdin_open ? STDIN_FILENO : -1;   /* -1 = skip it */
+        pfd[0].fd = stdin_open && ready ? STDIN_FILENO : -1;   /* -1 = skip it */
         pfd[0].events = POLLIN;
         pfd[1].fd = sock;
         pfd[1].events = POLLIN;
@@ -117,8 +118,12 @@ int main(int argc, char *argv[])
                 tail[1] = tail[2];
                 tail[2] = buf[i];
             }
-            if (tail[0] == '\n' && tail[1] == '#' && tail[2] == ' ')
+            if (tail[0] == '\n' && tail[1] == '#' && tail[2] == ' ') {
                 running = 0;
+                ready = 1;
+                if (!stdin_open)
+                    break;                          /* input file ended while it ran */
+            }
         }
 
         /* User input */

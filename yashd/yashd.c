@@ -76,7 +76,8 @@ static int handle_msg(session_t *s, char *msg, int len)
 {
     if (len >= 4 && strncmp(msg, "CMD ", 4) == 0) {
         msg[len] = '\0';
-        log_cmd(s, msg + 4);
+        if (msg[4 + strspn(msg + 4, " \t")] != '\0')
+            log_cmd(s, msg + 4);    /* log real commands, not empty lines */
         if (session_cmd(s, msg + 4))
             send_prompt(s);
 
@@ -210,8 +211,9 @@ static void daemon_init(void)
     setsid();
     signal(SIGHUP, SIG_IGN);
 
-    /* 3. Don't keep any directory busy, and don't inherit a file-creation mask */
-    if (chdir("/") < 0)
+    /* 3. Run from /tmp like the class daemon example (u-echod), so commands
+       can create files with relative redirects; don't inherit a file-creation mask */
+    if (chdir("/tmp") < 0)
         exit(EXIT_FAILURE);
     umask(0);
 

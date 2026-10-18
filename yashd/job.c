@@ -66,6 +66,7 @@ int job_add(session_t *s, pid_t pgid, jstate_t st, const char *cmd)
             s->jobs[i].num   = cur ? cur->num + 1 : 1;
             s->jobs[i].pgid  = pgid;
             s->jobs[i].state = st;
+            s->jobs[i].in_fd = -1;
             snprintf(s->jobs[i].cmd, sizeof(s->jobs[i].cmd), "%s", cmd);
             return s->jobs[i].num;
         }
@@ -97,8 +98,11 @@ static void print_jobs(session_t *s, int only_done)
             job_print(s, j);
     }
     for (i = 0; i < MAX_JOBS; i++)
-        if (s->jobs[i].used && s->jobs[i].state == JOB_DONE)
+        if (s->jobs[i].used && s->jobs[i].state == JOB_DONE) {
+            if (s->jobs[i].in_fd >= 0)
+                close(s->jobs[i].in_fd);
             s->jobs[i].used = 0;
+        }
 }
 
 /* reaping */
@@ -157,10 +161,14 @@ int foreground_poll(session_t *s)
        a job resumed with fg that has now finished is then removed. */
     j = job_find(s, pgid);
     if (stopped) {
-        if (j)
+        if (j == NULL && job_add(s, pgid, JOB_STOPPED, s->fg_cmd) > 0)
+            j = job_find(s, pgid);
+        if (j) {
+            /* keep its stdin pipe open so typing still reaches it after fg */
             j->state = JOB_STOPPED;
-        else
-            job_add(s, pgid, JOB_STOPPED, s->fg_cmd);
+            j->in_fd = s->in_fd;
+            s->in_fd = -1;
+        }
     } else if (j) {
         j->used = 0;
     }
@@ -198,7 +206,8 @@ int fg_builtin(session_t *s)
     session_printf(s, "%s\n", j->cmd);
     j->state = JOB_RUNNING;
     snprintf(s->fg_cmd, sizeof(s->fg_cmd), "%s", j->cmd);
-    s->in_fd = -1;                          /* its stdin was set when it started */
+    s->in_fd = j->in_fd;                    /* typed text goes to it again */
+    j->in_fd = -1;
     s->fg_pgid = j->pgid;
     kill(-j->pgid, SIGCONT);                /* resume every process in the job */
     return 0;
@@ -233,5 +242,7 @@ void jobs_kill_all(session_t *s)
             kill(-s->jobs[i].pgid, SIGKILL);
             while (waitpid(-s->jobs[i].pgid, NULL, 0) > 0)
                 ;
+            if (s->jobs[i].in_fd >= 0)
+                close(s->jobs[i].in_fd);
         }
 }

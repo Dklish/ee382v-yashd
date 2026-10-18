@@ -57,7 +57,7 @@ One thread per client runs this loop; `yashd.c` owns the socket and the waiting,
 | Function | File | What it does | Called by |
 | --- | --- | --- | --- |
 | `main` | `yashd.c` | Daemonizes, creates the listening socket, accepts clients, starts a detached thread per client | (entry point) |
-| `daemon_init` (static) | `yashd.c` | Fork and exit parent, `setsid`, ignore SIGHUP, `chdir("/")`, `umask(0)`, close fds, stdio to `/dev/null`, lock `/tmp/yashd.pid` | `main` |
+| `daemon_init` (static) | `yashd.c` | Fork and exit parent, `setsid`, ignore SIGHUP, `chdir("/tmp")`, `umask(0)`, close fds, stdio to `/dev/null`, lock `/tmp/yashd.pid` | `main` |
 | `reusePort` (static) | `yashd.c` | `SO_REUSEADDR` so the daemon can rebind 3820 right after a restart | `main` |
 | `serve_client` (static) | `yashd.c` | The thread: `poll()` on the socket, waking every 50ms while a foreground job runs to call `session_poll` | `pthread_create` |
 | `read_messages` (static) | `yashd.c` | `read()` into the session's `inbuf`; 0 bytes means the client left | `serve_client` |
@@ -127,4 +127,4 @@ Everything in `session.h` under "implemented by the shell side". `session_stub.c
 - **Reset SIGPIPE to default in the child.** The daemon ignores it, and ignored signals survive `exec`.
 - **No terminal.** Drop `tcsetpgrp`; Ctrl-C and Ctrl-Z arrive through `session_ctl`.
 - **Output goes to the socket.** In the child, `dup2(s->sock, 1)` and `dup2(s->sock, 2)`; in the shell, `session_printf(s, …)` instead of `printf` for `jobs`, `fg` and `bg`.
-- **Working directory is `/`.** Daemon rule; relative redirects like `> out.txt` fail without root. Use full paths while testing, or we change it to `/tmp`.
+- **Working directory is `/tmp`**, like the class daemon example, so commands run there and `> out.txt` lands in `/tmp`.
